@@ -1,32 +1,25 @@
 {
-  "name": "typescript-project",
+  "name": "military-workers",
   "version": "1.0.0",
-  "description": "A TypeScript project",
-  "main": "dist/index.js",
+  "description": "Multi-service project: UDP Camera Workers + File Storage System",
+  "private": true,
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "demo": "ts-node src/demo.ts",
-    "watch": "tsc --watch",
-    "example:receiver": "ts-node src/examples/receiver-example.ts",
-    "example:sender": "ts-node src/examples/sender-example.ts",
-    "example:server": "ts-node src/examples/server-manager-example.ts",
-    "example:echo": "ts-node src/examples/echo-server-example.ts",
-    "example:custom": "ts-node src/examples/custom-server-example.ts",
-    "pelco:server": "ts-node src/examples/pelco-d-server-example.ts",
-    "pelco:client": "ts-node src/examples/pelco-d-client-example.ts",
-    "pelco:terminal": "ts-node src/examples/pelco-d-terminal.ts",
-    "smart:server": "ts-node src/examples/smart-server-example.ts",
-    "smart:client": "ts-node src/examples/smart-client-example.ts",
-    "smart:terminal": "ts-node src/examples/smart-terminal.ts"
+    "install:all": "cd udp_workers && npm install && cd ../stockage && npm install",
+    "build:all": "cd udp_workers && npm run build && cd ../stockage && npm run build",
+    "dev:udp": "cd udp_workers && npm run dev",
+    "dev:storage": "cd stockage && npm run dev",
+    "dev:all": "concurrently \"npm run dev:udp\" \"npm run dev:storage\"",
+    "pelco:server": "cd udp_workers && npm run pelco:server",
+    "pelco:terminal": "cd udp_workers && npm run pelco:terminal",
+    "smart:server": "cd udp_workers && npm run smart:server",
+    "smart:terminal": "cd udp_workers && npm run smart:terminal",
+    "ftp": "cd stockage && npm run ftp",
+    "api": "cd stockage && npm run api"
   },
-  "keywords": [],
+  "keywords": ["udp", "ftp", "express", "pelco-d", "smart", "camera", "storage"],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "typescript": "^5.3.0",
-    "ts-node": "^10.9.2"
+    "concurrently": "^8.2.2"
   }
 }
