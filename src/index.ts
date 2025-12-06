@@ -62,8 +62,8 @@ const smartConfig = {
         console.log('  Description:', desc);
         // POST requests based on command
         try {
-            // const baseUrl = 'http://localhost:9898';
-            const baseUrl = 'http://192.168.1.237:9898';
+            const baseUrl = 'http://localhost:9898';
+            // const baseUrl = 'http://192.168.1.237:9898';
 
             // Command 0x10 - Focus Start
             if (decoded.command === 0x10) {
