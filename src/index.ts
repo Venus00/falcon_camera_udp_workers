@@ -107,9 +107,9 @@ const smartConfig = {
 
             else if (decoded.command === 0x30) {
                 console.log(`  → Sending POST request with id: ${decoded.param1}`);
-                const response = await fetch(`${baseUrl}/track/object/${decoded.param1}`, {
+                const response = await fetch(`${baseUrl}/track/object`, {
                     method: 'POST',
-                    // body: JSON.stringify({ id: decoded.param1 })
+                    body: JSON.stringify({ id: decoded.param1 })
                 });
 
                 console.log(`  Status: ${response.status} ${response.statusText}`);
