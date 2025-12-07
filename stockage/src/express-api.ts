@@ -100,7 +100,7 @@ app.get('/files', (req: Request, res: Response) => {
 
                 // Filter only .mp4_ files (not .mp4)
                 const mp4Files = files.filter(file =>
-                    file.toLowerCase().endsWith('.mp4_')
+                    file.toLowerCase().endsWith('.mp4')
                 );
 
                 // Add each video to the list with metadata
@@ -133,7 +133,7 @@ app.get('/files', (req: Request, res: Response) => {
         res.json({
             count: videoList.length,
             videos: videoList,
-            message: `Found ${videoList.length} videos with .mp4_ extension`
+            message: `Found ${videoList.length} videos with .mp4 extension`
         });
 
     } catch (error) {
@@ -157,7 +157,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
             return res.status(400).json({
                 error: 'Missing parameters',
                 message: 'Both "name" and "date" parameters are required',
-                example: '/files/search-video?name=13.00.00-****.mp4_&date=2025-12-07'
+                example: '/files/search-video?name=13.00.00-****.mp4&date=2025-12-07'
             });
         }
 
@@ -173,12 +173,12 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         }
 
         // Extraire l'heure du nom du fichier (les 2 premiers caractères)
-        // Exemple: "13.00.00-****.mp4_" -> hour = "13"
+        // Exemple: "13.00.00-****.mp4" -> hour = "13"
         const hourMatch = fileName.match(/^(\d{2})\./);
         if (!hourMatch) {
             return res.status(400).json({
                 error: 'Invalid filename format',
-                message: 'Filename must start with hour format (e.g., 13.00.00-****.mp4_)'
+                message: 'Filename must start with hour format (e.g., 13.00.00-****.mp4)'
             });
         }
 
@@ -208,12 +208,12 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         // Chercher le fichier dans le dossier
         const files = fs.readdirSync(targetPath);
 
-        // Support pour wildcards: 13.00.00-****.mp4_ peut matcher 13.00.00-1234.mp4_
+        // Support pour wildcards: 13.00.00-****.mp4 peut matcher 13.00.00-1234.mp4
         const searchPattern = fileName.replace(/\*/g, '.*');
         const regex = new RegExp(`^${searchPattern}$`, 'i');
 
         const matchedFiles = files.filter(file =>
-            regex.test(file) && file.toLowerCase().endsWith('.mp4_')
+            regex.test(file) && file.toLowerCase().endsWith('.mp4')
         );
 
         if (matchedFiles.length === 0) {
@@ -221,7 +221,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
                 error: 'File not found',
                 message: `No file matching "${fileName}" found in ${fileDate}/${hour}`,
                 searchPath: targetPath,
-                availableFiles: files.filter(f => f.endsWith('.mp4_'))
+                availableFiles: files.filter(f => f.endsWith('.mp4'))
             });
         }
 
@@ -319,9 +319,9 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
             // Lire les fichiers dans le dossier
             const files = fs.readdirSync(hourPath);
 
-            // Filtrer uniquement les fichiers .mp4_
+            // Filtrer uniquement les fichiers .mp4
             const mp4Files = files.filter(file =>
-                file.toLowerCase().endsWith('.mp4_')
+                file.toLowerCase().endsWith('.mp4')
             );
 
             // Ajouter chaque vidéo à la liste
@@ -426,7 +426,7 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
 //         for (const hourFolder of hourFolders) {
 //             const hourPath = path.join(datePath, hourFolder);
 //             const files = fs.readdirSync(hourPath);
-//             const mp4Files = files.filter(file => file.toLowerCase().endsWith('.mp4_'));
+//             const mp4Files = files.filter(file => file.toLowerCase().endsWith('.mp4'));
 
 //             let totalSize = 0;
 //             mp4Files.forEach(file => {
@@ -479,7 +479,7 @@ app.delete('/files/delete-video', (req: Request, res: Response) => {
             return res.status(400).json({
                 error: 'Missing parameters',
                 message: 'Both "name" and "date" parameters are required',
-                example: '/files/delete-video?name=13.00.00-1234.mp4_&date=2025-12-07'
+                example: '/files/delete-video?name=13.00.00-1234.mp4&date=2025-12-07'
             });
         }
 
@@ -499,7 +499,7 @@ app.delete('/files/delete-video', (req: Request, res: Response) => {
         if (!hourMatch) {
             return res.status(400).json({
                 error: 'Invalid filename format',
-                message: 'Filename must start with hour format (e.g., 13.00.00-1234.mp4_)'
+                message: 'Filename must start with hour format (e.g., 13.00.00-1234.mp4)'
             });
         }
 
