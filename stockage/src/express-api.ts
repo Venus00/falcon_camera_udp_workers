@@ -193,8 +193,8 @@ app.get('/files/search-video', (req: Request, res: Response) => {
             hour
         );
 
-        console.log(`[API] 🔍 Searching for: ${fileName}`);
-        console.log(`[API] 📁 In directory: ${targetPath}`);
+        console.log(`[API]  Searching for: ${fileName}`);
+        console.log(`[API]  In directory: ${targetPath}`);
 
         // Vérifier si le dossier existe
         if (!fs.existsSync(targetPath)) {
@@ -208,7 +208,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         // Chercher le fichier dans le dossier
         const files = fs.readdirSync(targetPath);
 
-        console.log(`[API] 📋 Files in directory:`, files);
+        console.log(`[API]  Files in directory:`, files);
 
         // Chercher les fichiers qui commencent par le nom recherché
         // Exemple: chercher "14.00.05" trouvera "14.00.05-14.03.00[R][0@0][0].mp4"
@@ -220,7 +220,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
             return lowerFile.startsWith(lowerSearch) && lowerFile.endsWith('.mp4');
         });
 
-        console.log(`[API] 🔍 Matched files:`, matchedFiles);
+        console.log(`[API]  Matched files:`, matchedFiles);
 
         if (matchedFiles.length === 0) {
             return res.status(404).json({
@@ -236,13 +236,13 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         const matchedFile = matchedFiles[0];
         const filePath = path.join(targetPath, matchedFile);
 
-        console.log(`[API] ✅ File found: ${matchedFile}`);
-        console.log(`[API] 📥 Downloading video...`);
+        console.log(`[API]  File found: ${matchedFile}`);
+        console.log(`[API]  Downloading video...`);
 
         // Télécharger directement le fichier
         res.download(filePath, matchedFile, (err) => {
             if (err) {
-                console.error(`[API] ❌ Download error:`, err);
+                console.error(`[API]  Download error:`, err);
                 if (!res.headersSent) {
                     res.status(500).json({
                         error: 'Download failed',
@@ -250,7 +250,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
                     });
                 }
             } else {
-                console.log(`[API] ✅ Download completed: ${matchedFile}`);
+                console.log(`[API]  Download completed: ${matchedFile}`);
             }
         });
 
