@@ -62,6 +62,7 @@ def parse_data(data, addr):
 
     offset = 2
     for i in range(nb_objects):
+        # Format: CLS(1) + ID(1) + X1(2) + X2(2) + Y1(2) + Y2(2) + Z(4) = 14 bytes
         # -1 pour exclure le Checksum (1 byte)
         if offset + 14 > len(data) - 1:
             break
@@ -69,19 +70,13 @@ def parse_data(data, addr):
         cls = data[offset]
         id_track = data[offset + 1]
 
-        # Lire X, Y, Z en big-endian (4 bytes chacun)
-        x = (
-            (data[offset + 2] << 24)
-            | (data[offset + 3] << 16)
-            | (data[offset + 4] << 8)
-            | data[offset + 5]
-        )
-        y = (
-            (data[offset + 6] << 24)
-            | (data[offset + 7] << 16)
-            | (data[offset + 8] << 8)
-            | data[offset + 9]
-        )
+        # Lire X1, X2, Y1, Y2 en big-endian (2 bytes chacun)
+        x1 = (data[offset + 2] << 8) | data[offset + 3]
+        x2 = (data[offset + 4] << 8) | data[offset + 5]
+        y1 = (data[offset + 6] << 8) | data[offset + 7]
+        y2 = (data[offset + 8] << 8) | data[offset + 9]
+
+        # Lire Z en big-endian (4 bytes)
         z = (
             (data[offset + 10] << 24)
             | (data[offset + 11] << 16)
@@ -89,11 +84,19 @@ def parse_data(data, addr):
             | data[offset + 13]
         )
 
+        # Reconstruire X et Y à partir de X1, X2, Y1, Y2
+        x = (x1 << 16) | x2  # X = X1 (high 16 bits) + X2 (low 16 bits)
+        y = (y1 << 16) | y2  # Y = Y1 (high 16 bits) + Y2 (low 16 bits)
+
         print(f"\n📍 Objet {i+1}:")
         print(f"   CLS:      0x{cls:02X} ({cls})")
         print(f"   ID_TRACK: 0x{id_track:02X} ({id_track})")
-        print(f"   X:        0x{x:08X} ({x})")
-        print(f"   Y:        0x{y:08X} ({y})")
+        print(f"   X1:       0x{x1:04X} ({x1})")
+        print(f"   X2:       0x{x2:04X} ({x2})")
+        print(f"   X:        0x{x:08X} ({x})  [X1<<16 | X2]")
+        print(f"   Y1:       0x{y1:04X} ({y1})")
+        print(f"   Y2:       0x{y2:04X} ({y2})")
+        print(f"   Y:        0x{y:08X} ({y})  [Y1<<16 | Y2]")
         print(f"   Z:        0x{z:08X} ({z})")
 
         offset += 14
@@ -110,6 +113,7 @@ print("🎧 CLIENT UDP DÉMARRÉ")
 print("=" * 60)
 print(f"🖥️  Serveur cible: {SERVER_IP}:{UDP_PORT}")
 print(f"🔐 Validation Checksum simple activée (somme sans header)")
+print(f"📊 Format: X1(2B) + X2(2B) + Y1(2B) + Y2(2B) + Z(4B)")
 print("=" * 60)
 
 # S'enregistrer auprès du serveur
