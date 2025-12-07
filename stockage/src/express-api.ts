@@ -157,7 +157,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
             return res.status(400).json({
                 error: 'Missing parameters',
                 message: 'Both "name" and "date" parameters are required',
-                example: '/files/search-video?name=13.00.00-****.mp4&date=2025-12-07'
+                example: '/files/search-video?name=13.00.00&date=2025-12-07'
             });
         }
 
@@ -173,12 +173,12 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         }
 
         // Extraire l'heure du nom du fichier (les 2 premiers caractères)
-        // Exemple: "13.00.00-****.mp4" -> hour = "13"
+        // Exemple: "13.00.00" -> hour = "13"
         const hourMatch = fileName.match(/^(\d{2})\./);
         if (!hourMatch) {
             return res.status(400).json({
                 error: 'Invalid filename format',
-                message: 'Filename must start with hour format (e.g., 13.00.00-****.mp4)'
+                message: 'Filename must start with hour format (e.g., 13.00.00)'
             });
         }
 
@@ -193,8 +193,8 @@ app.get('/files/search-video', (req: Request, res: Response) => {
             hour
         );
 
-        console.log(`[API]  Searching for: ${fileName}`);
-        console.log(`[API]  In directory: ${targetPath}`);
+        console.log(`[API] 🔍 Searching for: ${fileName}`);
+        console.log(`[API] 📁 In directory: ${targetPath}`);
 
         // Vérifier si le dossier existe
         if (!fs.existsSync(targetPath)) {
@@ -208,20 +208,27 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         // Chercher le fichier dans le dossier
         const files = fs.readdirSync(targetPath);
 
-        // Support pour wildcards: 13.00.00-****.mp4 peut matcher 13.00.00-1234.mp4
-        const searchPattern = fileName.replace(/\*/g, '.*');
-        const regex = new RegExp(`^${searchPattern}$`, 'i');
+        console.log(`[API] 📋 Files in directory:`, files);
 
-        const matchedFiles = files.filter(file =>
-            regex.test(file) && file.toLowerCase().endsWith('.mp4')
-        );
+        // Chercher les fichiers qui commencent par le nom recherché
+        // Exemple: chercher "14.00.05" trouvera "14.00.05-14.03.00[R][0@0][0].mp4"
+        const matchedFiles = files.filter(file => {
+            const lowerFile = file.toLowerCase();
+            const lowerSearch = fileName.toLowerCase();
+
+            // Le fichier doit commencer par le nom recherché et se terminer par .mp4
+            return lowerFile.startsWith(lowerSearch) && lowerFile.endsWith('.mp4');
+        });
+
+        console.log(`[API] 🔍 Matched files:`, matchedFiles);
 
         if (matchedFiles.length === 0) {
             return res.status(404).json({
                 error: 'File not found',
                 message: `No file matching "${fileName}" found in ${fileDate}/${hour}`,
                 searchPath: targetPath,
-                availableFiles: files.filter(f => f.endsWith('.mp4'))
+                availableFiles: files.filter(f => f.toLowerCase().endsWith('.mp4')),
+                hint: 'Try using just the start time like: 14.00.05'
             });
         }
 
@@ -229,13 +236,13 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         const matchedFile = matchedFiles[0];
         const filePath = path.join(targetPath, matchedFile);
 
-        console.log(`[API]  File found: ${matchedFile}`);
-        console.log(`[API]  Downloading video...`);
+        console.log(`[API] ✅ File found: ${matchedFile}`);
+        console.log(`[API] 📥 Downloading video...`);
 
         // Télécharger directement le fichier
         res.download(filePath, matchedFile, (err) => {
             if (err) {
-                console.error(`[API]  Download error:`, err);
+                console.error(`[API] ❌ Download error:`, err);
                 if (!res.headersSent) {
                     res.status(500).json({
                         error: 'Download failed',
@@ -243,7 +250,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
                     });
                 }
             } else {
-                console.log(`[API]  Download completed: ${matchedFile}`);
+                console.log(`[API] ✅ Download completed: ${matchedFile}`);
             }
         });
 
