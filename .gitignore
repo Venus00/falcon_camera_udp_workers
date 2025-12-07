@@ -21,3 +21,6 @@ npm-debug.log*
 # Environment variables
 .env
 .env.local
+
+# Do not push local FTP storage
+ftp_storage/
