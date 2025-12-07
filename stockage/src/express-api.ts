@@ -11,7 +11,7 @@ import multer from 'multer';
 
 // Configuration
 const API_CONFIG = {
-    port: 3000,
+    port: 3001,
     host: '0.0.0.0',
     storage_path: path.join(__dirname, '../ftp_storage')
 };
@@ -58,11 +58,11 @@ app.get('/health', (req: Request, res: Response) => {
 app.get('/files', (req: Request, res: Response) => {
     try {
         const files = fs.readdirSync(API_CONFIG.storage_path);
-        
+
         const fileList = files.map(filename => {
             const filePath = path.join(API_CONFIG.storage_path, filename);
             const stats = fs.statSync(filePath);
-            
+
             return {
                 name: filename,
                 size: stats.size,
@@ -71,7 +71,7 @@ app.get('/files', (req: Request, res: Response) => {
                 isDirectory: stats.isDirectory()
             };
         });
-        
+
         res.json({
             count: fileList.length,
             files: fileList
@@ -89,13 +89,13 @@ app.get('/files/:filename/info', (req: Request, res: Response) => {
     try {
         const filename = req.params.filename;
         const filePath = path.join(API_CONFIG.storage_path, filename);
-        
+
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ error: 'File not found' });
         }
-        
+
         const stats = fs.statSync(filePath);
-        
+
         res.json({
             name: filename,
             size: stats.size,
@@ -117,11 +117,11 @@ app.get('/files/:filename', (req: Request, res: Response) => {
     try {
         const filename = req.params.filename;
         const filePath = path.join(API_CONFIG.storage_path, filename);
-        
+
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ error: 'File not found' });
         }
-        
+
         console.log(`[API] 📥 Serving file: ${filename}`);
         res.download(filePath, filename);
     } catch (error) {
@@ -138,9 +138,9 @@ app.post('/files', upload.single('file'), (req: Request, res: Response) => {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
-        
+
         console.log(`[API] ✅ File uploaded: ${req.file.filename}`);
-        
+
         res.status(201).json({
             message: 'File uploaded successfully',
             file: {
@@ -162,14 +162,14 @@ app.delete('/files/:filename', (req: Request, res: Response) => {
     try {
         const filename = req.params.filename;
         const filePath = path.join(API_CONFIG.storage_path, filename);
-        
+
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ error: 'File not found' });
         }
-        
+
         fs.unlinkSync(filePath);
         console.log(`[API] 🗑️  File deleted: ${filename}`);
-        
+
         res.json({
             message: 'File deleted successfully',
             filename
@@ -186,20 +186,20 @@ app.delete('/files/:filename', (req: Request, res: Response) => {
 app.get('/search', (req: Request, res: Response) => {
     try {
         const query = req.query.q as string;
-        
+
         if (!query) {
             return res.status(400).json({ error: 'Search query required' });
         }
-        
+
         const files = fs.readdirSync(API_CONFIG.storage_path);
-        const matches = files.filter(file => 
+        const matches = files.filter(file =>
             file.toLowerCase().includes(query.toLowerCase())
         );
-        
+
         const results = matches.map(filename => {
             const filePath = path.join(API_CONFIG.storage_path, filename);
             const stats = fs.statSync(filePath);
-            
+
             return {
                 name: filename,
                 size: stats.size,
@@ -207,7 +207,7 @@ app.get('/search', (req: Request, res: Response) => {
                 path: `/files/${filename}`
             };
         });
-        
+
         res.json({
             query,
             count: results.length,
