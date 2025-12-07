@@ -31,16 +31,23 @@ const ftpServer = new FtpSrv({
     pasv_min: FTP_CONFIG.pasv_min,
     pasv_max: FTP_CONFIG.pasv_max,
     greeting: FTP_CONFIG.greeting,
-    anonymous: true  // Allow anonymous login for simplicity
+    anonymous: false  // Allow anonymous login for simplicity
 });
 
 // Handle login
 ftpServer.on('login', (data: any, resolve: any, reject: any) => {
     console.log(`[FTP] Login attempt - User: ${data.username}`);
-    
-    // For anonymous or any user, grant access to storage directory
-    resolve({ root: FTP_CONFIG.storage_path });
-    console.log(`[FTP] User "${data.username}" logged in successfully`);
+
+    if (data.username === "admin" && data.password === "2899100*-+") {
+        // If credentials are correct, resolve the login
+        // You can also specify a root directory for this user
+        console.log(`[FTP] User "${data.username}" logged in successfully`);
+
+        resolve({ root: FTP_CONFIG.storage_path });
+    } else {
+        // If credentials are incorrect, reject the login
+        reject({});
+    }
 });
 
 // Handle client connections
