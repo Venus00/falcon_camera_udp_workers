@@ -78,7 +78,7 @@ export interface DecodedPelcoD {
 export const PELCO_D_CONSTANTS = {
     START_BYTE: 0xFF,
     PACKET_LENGTH: 7,
-    
+
     // Command 1 bits
     CMD1_SENSE: 0x80,
     CMD1_AUTO_SCAN: 0x10,
@@ -86,7 +86,7 @@ export const PELCO_D_CONSTANTS = {
     CMD1_IRIS_CLOSE: 0x04,
     CMD1_IRIS_OPEN: 0x02,
     CMD1_FOCUS_NEAR: 0x01,
-    
+
     // Command 2 bits
     CMD2_FOCUS_FAR: 0x80,
     CMD2_ZOOM_OUT: 0x40,
@@ -95,7 +95,7 @@ export const PELCO_D_CONSTANTS = {
     CMD2_TILT_UP: 0x08,
     CMD2_PAN_RIGHT: 0x02,
     CMD2_PAN_LEFT: 0x04,
-    
+
     // Speed limits
     MIN_SPEED: 0x00,
     MAX_SPEED: 0x3F
@@ -108,6 +108,8 @@ export interface PelcoDServerConfig {
     port: number;
     host?: string;
     defaultCameraId?: number;
+    focusServerUrl?: string;  // HTTP API server URL (default: http://localhost:3000)
+    cameraName?: string;      // Camera name for API requests (default: cam2)
     onCommand?: (decoded: DecodedPelcoD) => void;
     onError?: (error: Error) => void;
 }
