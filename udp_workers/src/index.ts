@@ -43,7 +43,6 @@ const pelcoDConfig = {
 // Server 2: SMART Configuration
 const smartConfig = {
     port: 52382,
-    responsePort: 52383,
     host: '0.0.0.0',
     defaultCameraId: 1,
 

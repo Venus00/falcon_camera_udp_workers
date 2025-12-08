@@ -148,28 +148,29 @@ export const SMART_CONSTANTS = {
     HEADER_BYTE: 0xFA,              // SMART request header
     RESPONSE_HEADER: 0xFB,          // SMART response header
     PACKET_LENGTH: 7,               // Packet size
-    RESPONSE_PORT: 52383,           // Camera response port
-    
+
+    RESPONSE_PORT: 52344,           // Camera response port
+
     // Command codes
     CMD_RAPID_FOCUS: 0x10,
     CMD_MULTI_OBJECT: 0x20,
     CMD_SMART_TRACKING: 0x30,
     CMD_AUTO_RECORD: 0x40,
-    
+
     // Focus modes
     FOCUS_AUTO: 0,
     FOCUS_LOW_LIGHT: 1,
     FOCUS_FAST_MOVING: 2,
-    
+
     // Tracking modes
     TRACK_NORMAL: 0,
     TRACK_AGGRESSIVE: 1,
     TRACK_STEALTH: 2,
-    
+
     // Record control
     RECORD_STOP: 0,
     RECORD_START: 1,
-    
+
     // Record reasons
     REASON_MANUAL: 0,
     REASON_OBJECT: 1,
