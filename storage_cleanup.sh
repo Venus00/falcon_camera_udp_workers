@@ -9,12 +9,9 @@ IA_PATH="${BASE_PATH}/IA"
 CAMERA_LIMIT=50
 IA_LIMIT=10
 
-# Fichier de log
-LOG_FILE="/home/ubuntu/falcon_camera_udp_workers/storage_cleanup.log"
-
-# Fonction pour logger les messages
+# Fonction pour afficher les messages
 log_message() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
 # Fonction pour obtenir la taille d'un dossier en Go
@@ -33,14 +30,14 @@ cleanup_camera_storage() {
     log_message "Taille actuelle du stockage caméra: ${current_size} Go"
     
     if (( $(echo "$current_size > $CAMERA_LIMIT" | bc -l) )); then
-        log_message "⚠️  ALERTE: Stockage caméra > ${CAMERA_LIMIT} Go. Début du nettoyage FIFO..."
+        log_message "  ALERTE: Stockage caméra > ${CAMERA_LIMIT} Go. Début du nettoyage FIFO..."
         
         # Parcourir les dossiers de dates triés par ordre chronologique
         for date_dir in $(ls -1d "${CAMERA_PATH}"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] 2>/dev/null | sort); do
             current_size=$(get_size_gb "$CAMERA_PATH")
             
             if (( $(echo "$current_size <= $CAMERA_LIMIT" | bc -l) )); then
-                log_message "✓ Taille réduite à ${current_size} Go. Nettoyage terminé."
+                log_message " Taille réduite à ${current_size} Go. Nettoyage terminé."
                 break
             fi
             
@@ -49,7 +46,7 @@ cleanup_camera_storage() {
                 current_size=$(get_size_gb "$CAMERA_PATH")
                 
                 if (( $(echo "$current_size <= $CAMERA_LIMIT" | bc -l) )); then
-                    log_message "✓ Taille réduite à ${current_size} Go. Nettoyage terminé."
+                    log_message " Taille réduite à ${current_size} Go. Nettoyage terminé."
                     break 2
                 fi
                 
@@ -65,7 +62,7 @@ cleanup_camera_storage() {
             done
         done
     else
-        log_message "✓ Stockage caméra OK: ${current_size} Go / ${CAMERA_LIMIT} Go"
+        log_message " Stockage caméra OK: ${current_size} Go / ${CAMERA_LIMIT} Go"
     fi
 }
 
@@ -75,14 +72,14 @@ cleanup_ia_storage() {
     log_message "Taille actuelle du stockage IA: ${current_size} Go"
     
     if (( $(echo "$current_size > $IA_LIMIT" | bc -l) )); then
-        log_message "⚠️  ALERTE: Stockage IA > ${IA_LIMIT} Go. Début du nettoyage FIFO..."
+        log_message "  ALERTE: Stockage IA > ${IA_LIMIT} Go. Début du nettoyage FIFO..."
         
         # Parcourir les dossiers de dates triés par ordre chronologique
         for date_dir in $(ls -1d "${IA_PATH}"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] 2>/dev/null | sort); do
             current_size=$(get_size_gb "$IA_PATH")
             
             if (( $(echo "$current_size <= $IA_LIMIT" | bc -l) )); then
-                log_message "✓ Taille réduite à ${current_size} Go. Nettoyage terminé."
+                log_message " Taille réduite à ${current_size} Go. Nettoyage terminé."
                 break
             fi
             
@@ -91,7 +88,7 @@ cleanup_ia_storage() {
             rm -rf "$date_dir"
         done
     else
-        log_message "✓ Stockage IA OK: ${current_size} Go / ${IA_LIMIT} Go"
+        log_message " Stockage IA OK: ${current_size} Go / ${IA_LIMIT} Go"
     fi
 }
 
@@ -120,6 +117,6 @@ main() {
 # Boucle infinie avec exécution toutes les 10 minutes
 while true; do
     main
-    log_message "⏳ Attente de 10 minutes avant la prochaine vérification..."
+    log_message " Attente de 10 minutes avant la prochaine vérification..."
     sleep 600  # 600 secondes = 10 minutes
 done
