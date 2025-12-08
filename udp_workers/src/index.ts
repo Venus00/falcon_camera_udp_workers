@@ -18,7 +18,7 @@ console.log();
 
 // Server 1: PELCO-D Configuration
 const pelcoDConfig = {
-    port: 5000,
+    port: 52381,
     host: '0.0.0.0',
     defaultCameraId: 1,
 
@@ -42,7 +42,7 @@ const pelcoDConfig = {
 
 // Server 2: SMART Configuration
 const smartConfig = {
-    port: 5001,
+    port: 52382,
     responsePort: 52383,
     host: '0.0.0.0',
     defaultCameraId: 1,

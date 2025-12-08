@@ -14,12 +14,12 @@ console.log('='.repeat(70));
 
 // Configuration
 const SERVER_HOST = 'localhost';
-const SERVER_PORT = 5000;
+const SERVER_PORT = 52381;
 let CURRENT_CAMERA_ID = 1;
 
 // Create client
 const client = new PelcoDServer({
-    port: 5001,  // Client port (different from server)
+    port: 52381,  // Client port (different from server)
     defaultCameraId: CURRENT_CAMERA_ID
 });
 
@@ -36,7 +36,7 @@ async function sendCommand(buffer: Buffer, description: string) {
     console.log(`\n📤 Sending: ${description}`);
     console.log(`   Hex: ${buffer.toString('hex').toUpperCase()}`);
     console.log(`   Bytes: [${Array.from(buffer).map(b => '0x' + b.toString(16).toUpperCase().padStart(2, '0')).join(', ')}]`);
-    
+
     try {
         await client.sendCommand(SERVER_HOST, SERVER_PORT, buffer);
         console.log(`✅ Sent to ${SERVER_HOST}:${SERVER_PORT}`);
@@ -49,18 +49,18 @@ async function sendCommand(buffer: Buffer, description: string) {
 function parseHexString(hex: string): Buffer | null {
     // Remove spaces and any non-hex characters
     const cleaned = hex.replace(/[^0-9a-fA-F]/g, '');
-    
+
     // Check if valid hex and even length
     if (cleaned.length % 2 !== 0 || cleaned.length === 0) {
         return null;
     }
-    
+
     // Convert to buffer
     const bytes: number[] = [];
     for (let i = 0; i < cleaned.length; i += 2) {
         bytes.push(parseInt(cleaned.substr(i, 2), 16));
     }
-    
+
     return Buffer.from(bytes);
 }
 
@@ -68,19 +68,19 @@ function parseHexString(hex: string): Buffer | null {
 async function processCommand(input: string) {
     const parts = input.trim().split(/\s+/);
     const cmd = parts[0].toLowerCase();
-    
+
     if (!cmd) {
         showPrompt();
         return;
     }
-    
+
     try {
         switch (cmd) {
             case 'help':
             case 'h':
                 showHelp();
                 break;
-            
+
             case 'camera':
             case 'cam':
                 if (parts[1]) {
@@ -91,7 +91,7 @@ async function processCommand(input: string) {
                     console.log(`Current Camera ID: ${CURRENT_CAMERA_ID}`);
                 }
                 break;
-            
+
             case 'hex':
                 // Send raw hex bytes
                 const hexData = parts.slice(1).join('');
@@ -109,60 +109,60 @@ async function processCommand(input: string) {
                     console.log('❌ Invalid hex string. Use format: hex FF0100042000 25');
                 }
                 break;
-            
+
             case 'left':
             case 'l':
                 const leftSpeed = parseInt(parts[1] || '32');
                 await sendCommand(builder.panLeft(leftSpeed), `Pan Left (speed: ${leftSpeed})`);
                 break;
-            
+
             case 'right':
             case 'r':
                 const rightSpeed = parseInt(parts[1] || '32');
                 await sendCommand(builder.panRight(rightSpeed), `Pan Right (speed: ${rightSpeed})`);
                 break;
-            
+
             case 'up':
             case 'u':
                 const upSpeed = parseInt(parts[1] || '32');
                 await sendCommand(builder.tiltUp(upSpeed), `Tilt Up (speed: ${upSpeed})`);
                 break;
-            
+
             case 'down':
             case 'd':
                 const downSpeed = parseInt(parts[1] || '32');
                 await sendCommand(builder.tiltDown(downSpeed), `Tilt Down (speed: ${downSpeed})`);
                 break;
-            
+
             case 'zoomin':
             case 'zi':
                 const ziSpeed = parseInt(parts[1] || '32');
                 await sendCommand(builder.zoomIn(ziSpeed), `Zoom In (speed: ${ziSpeed})`);
                 break;
-            
+
             case 'zoomout':
             case 'zo':
                 const zoSpeed = parseInt(parts[1] || '32');
                 await sendCommand(builder.zoomOut(zoSpeed), `Zoom Out (speed: ${zoSpeed})`);
                 break;
-            
+
             case 'focusnear':
             case 'fn':
                 const fnSpeed = parseInt(parts[1] || '32');
                 await sendCommand(builder.focusNear(fnSpeed), `Focus Near (speed: ${fnSpeed})`);
                 break;
-            
+
             case 'focusfar':
             case 'ff':
                 const ffSpeed = parseInt(parts[1] || '32');
                 await sendCommand(builder.focusFar(ffSpeed), `Focus Far (speed: ${ffSpeed})`);
                 break;
-            
+
             case 'stop':
             case 's':
                 await sendCommand(builder.stop(), 'Stop All Movements');
                 break;
-            
+
             case 'test':
                 console.log('\n🧪 Running test sequence...');
                 await sendCommand(builder.panLeft(32), 'Test: Pan Left');
@@ -174,7 +174,7 @@ async function processCommand(input: string) {
                 await sendCommand(builder.stop(), 'Test: Stop');
                 console.log('✅ Test sequence complete');
                 break;
-            
+
             case 'exit':
             case 'quit':
             case 'q':
@@ -183,7 +183,7 @@ async function processCommand(input: string) {
                 await client.stop();
                 process.exit(0);
                 return;
-            
+
             default:
                 console.log(`❌ Unknown command: ${cmd}`);
                 console.log('Type "help" for available commands');
@@ -191,7 +191,7 @@ async function processCommand(input: string) {
     } catch (error) {
         console.error('❌ Error processing command:', error);
     }
-    
+
     showPrompt();
 }
 
@@ -236,7 +236,7 @@ async function init() {
     console.log(`   Speed Range: 0-63`);
     console.log(`\n💡 Type "help" for available commands`);
     console.log(`💡 Make sure Server 1 is running: npm run pelco:server\n`);
-    
+
     showPrompt();
 }
 

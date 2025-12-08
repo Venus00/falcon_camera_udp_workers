@@ -11,7 +11,7 @@ import { UdpSender } from '../modules/UdpSender';
 // Configuration
 const CONFIG = {
     host: '127.0.0.1',
-    port: 5001,         // SMART server port
+    port: 52382,         // SMART server port
     cameraId: 1
 };
 
@@ -36,15 +36,15 @@ const rl = readline.createInterface({
 async function sendCommand(buffer: Buffer, description: string): Promise<void> {
     console.log(`→ ${description}`);
     console.log(`  Hex: ${buffer.toString('hex').toUpperCase()}`);
-    
+
     const bytes = await sender.send({
         targetHost: CONFIG.host,
         targetPort: CONFIG.port,
         data: buffer
     });
-    
+
     console.log(`  Sent ${bytes} bytes to ${CONFIG.host}:${CONFIG.port}`);
-    
+
     // Decode and display
     const decoded = SmartDecoder.decode(buffer);
     console.log(`  Valid: ${decoded.valid}, Checksum: ${decoded.checksumValid}`);
@@ -55,7 +55,7 @@ function showHelp(): void {
     console.log('\n=== SMART Protocol Terminal ===');
     console.log(`Target: ${CONFIG.host}:${CONFIG.port}`);
     console.log(`Camera ID: ${CONFIG.cameraId}\n`);
-    
+
     console.log('Commands:');
     console.log('  focus auto          - Rapid Focus (Auto mode)');
     console.log('  focus lowlight      - Rapid Focus (Low-Light mode)');
@@ -84,28 +84,28 @@ function showHelp(): void {
 async function handleInput(line: string): Promise<void> {
     const input = line.trim().toLowerCase();
     const parts = input.split(/\s+/);
-    
+
     if (!input || parts.length === 0) {
         rl.prompt();
         return;
     }
-    
+
     const cmd = parts[0];
-    
+
     try {
         switch (cmd) {
             case 'help':
             case '?':
                 showHelp();
                 break;
-                
+
             case 'exit':
             case 'quit':
                 console.log('Goodbye!');
                 await sender.close();
                 process.exit(0);
                 break;
-                
+
             case 'camera':
                 if (parts.length < 2) {
                     console.log('Usage: camera <id>');
@@ -120,7 +120,7 @@ async function handleInput(line: string): Promise<void> {
                     }
                 }
                 break;
-                
+
             // FOCUS commands
             case 'focus':
                 if (parts.length < 2) {
@@ -138,13 +138,13 @@ async function handleInput(line: string): Promise<void> {
                     }
                 }
                 break;
-                
+
             // SCAN command
             case 'scan':
                 await sendCommand(builder.multiObjectScan(), 'Multi-Object Scan');
                 console.log('  → Camera will respond on port 52383');
                 break;
-                
+
             // TRACK commands
             case 'track':
                 if (parts.length < 2) {
@@ -155,7 +155,7 @@ async function handleInput(line: string): Promise<void> {
                         console.log('Invalid object ID');
                     } else {
                         const mode = parts.length > 2 ? parts[2] : 'normal';
-                        
+
                         if (mode === 'normal') {
                             await sendCommand(
                                 builder.trackObjectNormal(objectId),
@@ -177,14 +177,14 @@ async function handleInput(line: string): Promise<void> {
                     }
                 }
                 break;
-                
+
             // RECORD commands
             case 'record':
                 if (parts.length < 2) {
                     console.log('Usage: record <start|obj|alert|stop> [duration]');
                 } else {
                     const action = parts[1];
-                    
+
                     if (action === 'stop') {
                         await sendCommand(builder.stopRecord(), 'Stop Recording');
                     } else if (action === 'start' || action === 'obj' || action === 'alert') {
@@ -218,7 +218,7 @@ async function handleInput(line: string): Promise<void> {
                     }
                 }
                 break;
-                
+
             // RAW HEX command
             case 'hex':
                 if (parts.length < 2) {
@@ -245,7 +245,7 @@ async function handleInput(line: string): Promise<void> {
                     }
                 }
                 break;
-                
+
             default:
                 console.log(`Unknown command: ${cmd}`);
                 console.log('Type "help" for available commands');
@@ -254,7 +254,7 @@ async function handleInput(line: string): Promise<void> {
     } catch (error) {
         console.error('Error:', (error as Error).message);
     }
-    
+
     rl.prompt();
 }
 
