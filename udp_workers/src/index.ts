@@ -106,20 +106,43 @@ const smartConfig = {
             }
 
             else if (decoded.command === 0x30) {
-                console.log(`  → Sending POST request with id: ${decoded.param1}`);
-                const response = await fetch(`${baseUrl}/track/object/${decoded.param1}`, {
-                    method: 'POST',
-                    // body: JSON.stringify({ id: decoded.param1 })
+                const endpoint = decoded.param2 === 0 ? 'track/stop' :
+                    decoded.param2 === 1 ? `track/object/${decoded.param1}` : null;
+
+                if (endpoint === null) {
+                    console.log(`   Unknown param2 value: ${decoded.param2}`);
+                    return;
+                }
+
+                console.log(`  → Sending POST request: ${endpoint}`);
+                const response = await fetch(`${baseUrl}/${endpoint}`, {
+                    method: 'POST'
                 });
 
                 console.log(`  Status: ${response.status} ${response.statusText}`);
 
                 if (response.ok) {
-                    console.log(`   ID ${decoded.param1} sent successfully`);
+                    console.log(`   ${endpoint} request sent successfully`);
                 } else {
-                    console.log(`   ID request failed: ${response.status}`);
+                    console.log(`   ${endpoint} request failed: ${response.status}`);
                 }
             }
+
+            // else if (decoded.command === 0x30) {
+            //     console.log(`  → Sending POST request with id: ${decoded.param1}`);
+            //     const response = await fetch(`${baseUrl}/track/object/${decoded.param1}`, {
+            //         method: 'POST',
+            //         // body: JSON.stringify({ id: decoded.param1 })
+            //     });
+
+            //     console.log(`  Status: ${response.status} ${response.statusText}`);
+
+            //     if (response.ok) {
+            //         console.log(`   ID ${decoded.param1} sent successfully`);
+            //     } else {
+            //         console.log(`   ID request failed: ${response.status}`);
+            //     }
+            // }
         } catch (error) {
             if (error instanceof Error) {
                 console.error('   POST request error:', error.message);
