@@ -2,7 +2,7 @@
 
 # Configuration des chemins
 BASE_PATH="/home/ubuntu/falcon_camera_udp_workers/stockage/ftp_storage"
-CAMERA_PATH="${BASE_PATH}/share/HG0438PAZ00098"
+CAMERA_PATH="${BASE_PATH}/share/HC0404PAZ00019"
 IA_PATH="${BASE_PATH}/IA"
 
 # Limites de stockage (en Go)

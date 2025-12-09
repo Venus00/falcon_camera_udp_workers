@@ -57,7 +57,7 @@ app.get('/health', (req: Request, res: Response) => {
 // Get all videos from dynamic date/hour structure
 app.get('/files', (req: Request, res: Response) => {
     try {
-        const basePath = path.join(API_CONFIG.storage_path, 'share/HG0438PAZ00098');
+        const basePath = path.join(API_CONFIG.storage_path, 'share/HC0404PAZ00019');
         const videoList: any[] = [];
 
         // Check if base path exists
@@ -116,7 +116,7 @@ app.get('/files', (req: Request, res: Response) => {
                         modified: stats.mtime,
                         date: dateFolder,
                         hour: hourFolder,
-                        relativePath: `share/HG0438PAZ00098/${dateFolder}/001/dav/${hourFolder}/${videoFile}`,
+                        relativePath: `share/HC0404PAZ00019/${dateFolder}/001/dav/${hourFolder}/${videoFile}`,
                         downloadUrl: `/files/${encodeURIComponent(videoFile)}`
                     });
                 }
@@ -187,7 +187,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         // Construire le chemin du dossier
         const targetPath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00098',
+            'share/HC0404PAZ00019',
             fileDate,
             '001/dav',
             hour
@@ -288,7 +288,7 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
         // Construire le chemin du jour
         const datePath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00098',
+            'share/HC0404PAZ00019',
             fileDate,
             '001/dav'
         );
@@ -344,7 +344,7 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
                     modified: stats.mtime,
                     date: fileDate,
                     hour: hourFolder,
-                    relativePath: `share/HG0438PAZ00098/${fileDate}/001/dav/${hourFolder}/${videoFile}`,
+                    relativePath: `share/HC0404PAZ00019/${fileDate}/001/dav/${hourFolder}/${videoFile}`,
                     downloadUrl: `/files/search-video?name=${encodeURIComponent(videoFile)}&date=${fileDate}`
                 });
             }
@@ -386,95 +386,6 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
     }
 });
 
-// app.get('/files/videos-summary-by-date', (req: Request, res: Response) => {
-//     try {
-//         const { date } = req.query;
-
-//         if (!date) {
-//             return res.status(400).json({
-//                 error: 'Missing parameter',
-//                 message: 'Date parameter is required',
-//                 example: '/files/videos-summary-by-date?date=2025-12-07'
-//             });
-//         }
-
-//         const fileDate = date as string;
-
-//         if (!/^\d{4}-\d{2}-\d{2}$/.test(fileDate)) {
-//             return res.status(400).json({
-//                 error: 'Invalid date format',
-//                 message: 'Date must be in format YYYY-MM-DD'
-//             });
-//         }
-
-//         const datePath = path.join(
-//             API_CONFIG.storage_path,
-//             'share/HG0438PAZ00098',
-//             fileDate,
-//             '001/dav'
-//         );
-
-//         if (!fs.existsSync(datePath)) {
-//             return res.status(404).json({
-//                 error: 'Date directory not found',
-//                 message: `No videos found for date ${fileDate}`
-//             });
-//         }
-
-//         const hourSummary: any[] = [];
-
-//         const hourFolders = fs.readdirSync(datePath).filter(item => {
-//             const itemPath = path.join(datePath, item);
-//             return fs.statSync(itemPath).isDirectory() && /^\d{2}$/.test(item);
-//         });
-
-//         hourFolders.sort();
-
-//         for (const hourFolder of hourFolders) {
-//             const hourPath = path.join(datePath, hourFolder);
-//             const files = fs.readdirSync(hourPath);
-//             const mp4Files = files.filter(file => file.toLowerCase().endsWith('.mp4'));
-
-//             let totalSize = 0;
-//             mp4Files.forEach(file => {
-//                 const filePath = path.join(hourPath, file);
-//                 const stats = fs.statSync(filePath);
-//                 totalSize += stats.size;
-//             });
-
-//             hourSummary.push({
-//                 hour: hourFolder,
-//                 videoCount: mp4Files.length,
-//                 totalSize: totalSize,
-//                 totalSizeInMB: (totalSize / (1024 * 1024)).toFixed(2),
-//                 videos: mp4Files
-//             });
-//         }
-
-//         const totalVideos = hourSummary.reduce((sum, h) => sum + h.videoCount, 0);
-//         const totalSize = hourSummary.reduce((sum, h) => sum + h.totalSize, 0);
-
-//         res.json({
-//             success: true,
-//             date: fileDate,
-//             totalVideos: totalVideos,
-//             totalHours: hourSummary.length,
-//             totalSize: {
-//                 bytes: totalSize,
-//                 mb: (totalSize / (1024 * 1024)).toFixed(2),
-//                 gb: (totalSize / (1024 * 1024 * 1024)).toFixed(2)
-//             },
-//             hourlyBreakdown: hourSummary
-//         });
-
-//     } catch (error) {
-//         console.error('[API Error] Failed to get summary:', error);
-//         res.status(500).json({
-//             error: 'Failed to get summary',
-//             message: (error as Error).message
-//         });
-//     }
-// });
 
 // 1. Delete a specific video file ONLY
 app.delete('/files/delete-video', (req: Request, res: Response) => {
@@ -515,7 +426,7 @@ app.delete('/files/delete-video', (req: Request, res: Response) => {
         // Construire le chemin complet du fichier
         const filePath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00098',
+            'share/HC0404PAZ00019',
             fileDate,
             '001/dav',
             hour,
@@ -591,7 +502,7 @@ app.delete('/files/delete-by-hour', (req: Request, res: Response) => {
         // Construire le chemin du dossier d'heure
         const hourPath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00098',
+            'share/HC0404PAZ00019',
             fileDate,
             '001/dav',
             fileHour
@@ -679,7 +590,7 @@ app.delete('/files/delete-by-date', (req: Request, res: Response) => {
         // Construire le chemin du dossier complet de la date
         const dateRootPath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00098',
+            'share/HC0404PAZ00019',
             fileDate
         );
 
