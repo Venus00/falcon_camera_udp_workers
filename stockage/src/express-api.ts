@@ -57,7 +57,7 @@ app.get('/health', (req: Request, res: Response) => {
 // Get all videos from dynamic date/hour structure
 app.get('/files', (req: Request, res: Response) => {
     try {
-        const basePath = path.join(API_CONFIG.storage_path, 'share/HC0404PAZ00019');
+        const basePath = path.join(API_CONFIG.storage_path, 'share/HG0438PAZ00052');
         const videoList: any[] = [];
 
         // Check if base path exists
@@ -116,7 +116,7 @@ app.get('/files', (req: Request, res: Response) => {
                         modified: stats.mtime,
                         date: dateFolder,
                         hour: hourFolder,
-                        relativePath: `share/HC0404PAZ00019/${dateFolder}/001/dav/${hourFolder}/${videoFile}`,
+                        relativePath: `share/HG0438PAZ00052/${dateFolder}/001/dav/${hourFolder}/${videoFile}`,
                         downloadUrl: `/files/${encodeURIComponent(videoFile)}`
                     });
                 }
@@ -187,7 +187,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         // Construire le chemin du dossier
         const targetPath = path.join(
             API_CONFIG.storage_path,
-            'share/HC0404PAZ00019',
+            'share/HG0438PAZ00052',
             fileDate,
             '001/dav',
             hour
@@ -288,7 +288,7 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
         // Construire le chemin du jour
         const datePath = path.join(
             API_CONFIG.storage_path,
-            'share/HC0404PAZ00019',
+            'share/HG0438PAZ00052',
             fileDate,
             '001/dav'
         );
@@ -344,7 +344,7 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
                     modified: stats.mtime,
                     date: fileDate,
                     hour: hourFolder,
-                    relativePath: `share/HC0404PAZ00019/${fileDate}/001/dav/${hourFolder}/${videoFile}`,
+                    relativePath: `share/HG0438PAZ00052/${fileDate}/001/dav/${hourFolder}/${videoFile}`,
                     downloadUrl: `/files/search-video?name=${encodeURIComponent(videoFile)}&date=${fileDate}`
                 });
             }
@@ -426,7 +426,7 @@ app.delete('/files/delete-video', (req: Request, res: Response) => {
         // Construire le chemin complet du fichier
         const filePath = path.join(
             API_CONFIG.storage_path,
-            'share/HC0404PAZ00019',
+            'share/HG0438PAZ00052',
             fileDate,
             '001/dav',
             hour,
@@ -502,7 +502,7 @@ app.delete('/files/delete-by-hour', (req: Request, res: Response) => {
         // Construire le chemin du dossier d'heure
         const hourPath = path.join(
             API_CONFIG.storage_path,
-            'share/HC0404PAZ00019',
+            'share/HG0438PAZ00052',
             fileDate,
             '001/dav',
             fileHour
@@ -590,7 +590,7 @@ app.delete('/files/delete-by-date', (req: Request, res: Response) => {
         // Construire le chemin du dossier complet de la date
         const dateRootPath = path.join(
             API_CONFIG.storage_path,
-            'share/HC0404PAZ00019',
+            'share/HG0438PAZ00052',
             fileDate
         );
 
