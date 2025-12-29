@@ -33,7 +33,6 @@ const ftpServer = new FtpSrv({
     pasv_min: FTP_CONFIG.pasv_min,
     pasv_max: FTP_CONFIG.pasv_max,
     greeting: FTP_CONFIG.greeting,
-    port: 21,
     anonymous: false  // Allow anonymous login for simplicity
 });
 
@@ -48,7 +47,8 @@ ftpServer.on('login', ({ username, password }, resolve, reject) => {
     if (validUsers[username] === password) {
         console.log(`[FTP] User "${username}" logged in successfully`);
         return resolve({
-            root: FTP_CONFIG.storage_path
+            root: path.join(FTP_CONFIG.storage_path, username)
+
         });
     }
 
