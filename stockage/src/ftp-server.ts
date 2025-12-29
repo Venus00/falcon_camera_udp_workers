@@ -7,13 +7,17 @@ import { FtpSrv } from 'ftp-srv';
 import * as path from 'path';
 import * as fs from 'fs';
 
-// Configuration
 const FTP_CONFIG = {
     host: '0.0.0.0',
     port: 21,
     greeting: 'Welcome to Stockage FTP Server',
-    storage_path: path.join(__dirname, '../ftp_storage')
+    storage_path: path.join(__dirname, '../ftp_storage'),
+
+    pasv_url: '10.10.0.2',   // server IP
+    pasv_min: 50000,
+    pasv_max: 50100
 };
+
 
 // Ensure storage directory exists
 if (!fs.existsSync(FTP_CONFIG.storage_path)) {
@@ -31,30 +35,23 @@ const ftpServer = new FtpSrv({
     anonymous: false  // Allow anonymous login for simplicity
 });
 
-// Handle login
-ftpServer.on('login', (data: any, resolve: any, reject: any) => {
-    console.log(`[FTP] Login attempt - User: ${data.username}`);
+ftpServer.on('login', ({ username, password }, resolve, reject) => {
+    console.log(`[FTP] Login attempt - User: ${username}`);
 
-    if (data.username === "admin1" && data.password === "2899100*-+") {
-        // If credentials are correct, resolve the login
-        // You can also specify a root directory for this user
-        console.log(`[FTP] User "${data.username}" logged in successfully`);
+    const validUsers = {
+        admin: '2899100*-+',
+        admin1: '2899100*-+'
+    };
 
-        resolve({ root: FTP_CONFIG.storage_path });
-    } else {
-        // If credentials are incorrect, reject the login
-        reject({});
+    if (validUsers[username] === password) {
+        console.log(`[FTP] User "${username}" logged in successfully`);
+        return resolve({
+            root: FTP_CONFIG.storage_path
+        });
     }
-    if (data.username === "admin" && data.password === "2899100*-+") {
-        // If credentials are correct, resolve the login
-        // You can also specify a root directory for this user
-        console.log(`[FTP] User "${data.username}" logged in successfully`);
 
-        resolve({ root: FTP_CONFIG.storage_path });
-    } else {
-        // If credentials are incorrect, reject the login
-        reject({});
-    }
+    console.log(`[FTP] Invalid credentials for "${username}"`);
+    reject(new Error('Invalid credentials'));
 });
 
 // Handle client connections
