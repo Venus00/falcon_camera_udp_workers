@@ -35,6 +35,16 @@ const ftpServer = new FtpSrv({
 ftpServer.on('login', (data: any, resolve: any, reject: any) => {
     console.log(`[FTP] Login attempt - User: ${data.username}`);
 
+    if (data.username === "admin1" && data.password === "2899100*-+") {
+        // If credentials are correct, resolve the login
+        // You can also specify a root directory for this user
+        console.log(`[FTP] User "${data.username}" logged in successfully`);
+
+        resolve({ root: FTP_CONFIG.storage_path });
+    } else {
+        // If credentials are incorrect, reject the login
+        reject({});
+    }
     if (data.username === "admin" && data.password === "2899100*-+") {
         // If credentials are correct, resolve the login
         // You can also specify a root directory for this user
