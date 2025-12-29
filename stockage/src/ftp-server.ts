@@ -9,7 +9,7 @@ import * as fs from 'fs';
 
 const FTP_CONFIG = {
     host: '0.0.0.0',
-    port: 21,
+    port: 2121,
     greeting: 'Welcome to Stockage FTP Server',
     storage_path: path.join(__dirname, '../ftp_storage'),
 
