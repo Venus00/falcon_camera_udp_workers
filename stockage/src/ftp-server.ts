@@ -2,24 +2,21 @@
  * FTP Server for file storage
  * Handles file uploads and downloads via FTP protocol
  */
-
 import { FtpSrv } from 'ftp-srv';
 import * as path from 'path';
 import * as fs from 'fs';
 
 const FTP_CONFIG = {
     host: '0.0.0.0',
-    port: 2121,
+    port: 21,
     greeting: 'Welcome to Stockage FTP Server',
     storage_path: path.join(__dirname, '../ftp_storage'),
-
+    
     pasv_url: '10.10.0.2',   // server IP
     pasv_min: 50000,
     pasv_max: 50100
 };
-
-
-
+ 
 // Ensure storage directory exists
 if (!fs.existsSync(FTP_CONFIG.storage_path)) {
     fs.mkdirSync(FTP_CONFIG.storage_path, { recursive: true });
@@ -38,20 +35,18 @@ const ftpServer = new FtpSrv({
 
 ftpServer.on('login', ({ username, password }, resolve, reject) => {
     console.log(`[FTP] Login attempt - User: ${username}`);
-
-    const validUsers = {
-        admin: '2899100*-+',
-        admin1: '2899100*-+'
+    
+    const validUsers: Record<string, string> = {
+        admin: '2899100*-+'
     };
-
-    if (validUsers[username] === password) {
+    
+    if (username in validUsers && validUsers[username] === password) {
         console.log(`[FTP] User "${username}" logged in successfully`);
         return resolve({
-            root: path.join(FTP_CONFIG.storage_path, username)
-
+            root: path.join(FTP_CONFIG.storage_path, username) 
         });
     }
-
+    
     console.log(`[FTP] Invalid credentials for "${username}"`);
     reject(new Error('Invalid credentials'));
 });
