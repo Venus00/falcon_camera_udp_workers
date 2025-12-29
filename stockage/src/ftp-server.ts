@@ -43,7 +43,7 @@ ftpServer.on('login', ({ username, password }, resolve, reject) => {
     if (username in validUsers && validUsers[username] === password) {
         console.log(`[FTP] User "${username}" logged in successfully`);
         return resolve({
-            root: path.join(FTP_CONFIG.storage_path, username) 
+            root: FTP_CONFIG.storage_path 
         });
     }
     
