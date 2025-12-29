@@ -11,9 +11,6 @@ import * as fs from 'fs';
 const FTP_CONFIG = {
     host: '0.0.0.0',
     port: 21,
-    pasv_url: '127.0.0.1',
-    pasv_min: 1024,
-    pasv_max: 1048,
     greeting: 'Welcome to Stockage FTP Server',
     storage_path: path.join(__dirname, '../ftp_storage')
 };
