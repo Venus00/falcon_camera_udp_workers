@@ -1,6 +1,7 @@
 /**
  * Express API Server
  * Serves files from FTP storage via HTTP REST API
+ * Multi-camera support
  */
 
 import express, { Request, Response } from 'express';
@@ -8,13 +9,38 @@ import cors from 'cors';
 import * as path from 'path';
 import * as fs from 'fs';
 import multer from 'multer';
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // Configuration
 const API_CONFIG = {
     port: 3001,
     host: '0.0.0.0',
-    storage_path: path.join(__dirname, '../ftp_storage')
+    storage_path: path.join(__dirname, '../ftp_storage'),
+    cameras: {
+        cam1: process.env.CAM1 || 'HG0438PAZ00052',
+        cam2: process.env.CAM2 || 'HG0438PAZ00098'
+    }
 };
+
+// Helper function to get camera path
+function getCameraPath(camera?: string): { success: boolean; cameraId: string; error?: string } {
+    const cam = camera?.toLowerCase();
+    
+    if (!cam) {
+        return { success: false, cameraId: '', error: 'Camera parameter is required (cam1 or cam2)' };
+    }
+    
+    if (cam === 'cam1') {
+        return { success: true, cameraId: API_CONFIG.cameras.cam1 };
+    } else if (cam === 'cam2') {
+        return { success: true, cameraId: API_CONFIG.cameras.cam2 };
+    } else {
+        return { success: false, cameraId: '', error: 'Invalid camera. Use cam1 or cam2' };
+    }
+}
 
 // Ensure storage directory exists
 if (!fs.existsSync(API_CONFIG.storage_path)) {
@@ -36,7 +62,6 @@ const storage = multer.diskStorage({
         cb(null, API_CONFIG.storage_path);
     },
     filename: (req: any, file: any, cb: any) => {
-        // Keep original filename
         cb(null, file.originalname);
     }
 });
@@ -50,60 +75,60 @@ app.get('/health', (req: Request, res: Response) => {
     res.json({
         status: 'ok',
         service: 'Stockage API',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        cameras: API_CONFIG.cameras
     });
 });
 
 // Get all videos from dynamic date/hour structure
 app.get('/files', (req: Request, res: Response) => {
     try {
-        const basePath = path.join(API_CONFIG.storage_path, 'share/HG0438PAZ00052');
+        const { camera } = req.query;
+        
+        // Validate camera parameter
+        const cameraResult = getCameraPath(camera as string);
+        if (!cameraResult.success) {
+            return res.status(400).json({
+                error: 'Invalid camera parameter',
+                message: cameraResult.error,
+                example: '/files?camera=cam1'
+            });
+        }
+
+        const basePath = path.join(API_CONFIG.storage_path, 'share', cameraResult.cameraId);
         const videoList: any[] = [];
 
-        // Check if base path exists
         if (!fs.existsSync(basePath)) {
             return res.json({
+                camera: camera,
+                cameraId: cameraResult.cameraId,
                 count: 0,
                 videos: [],
                 message: 'Base path not found'
             });
         }
 
-        // Read all date folders (2025-12-07, 2025-12-08, etc.)
-        // Ces dossiers sont créés chaque jour automatiquement
         const dateFolders = fs.readdirSync(basePath).filter(item => {
             const itemPath = path.join(basePath, item);
             return fs.statSync(itemPath).isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(item);
         });
 
-        // Loop through each date folder
         for (const dateFolder of dateFolders) {
             const datePath = path.join(basePath, dateFolder, '001/dav');
-
             if (!fs.existsSync(datePath)) continue;
 
-            // Read all hour folders (00, 01, 02, ..., 23)
-            // Ces dossiers sont créés chaque heure automatiquement
             const hourFolders = fs.readdirSync(datePath).filter(item => {
                 const itemPath = path.join(datePath, item);
                 return fs.statSync(itemPath).isDirectory() && /^\d{2}$/.test(item);
             });
 
-            // Loop through each hour folder
             for (const hourFolder of hourFolders) {
                 const hourPath = path.join(datePath, hourFolder);
-
-                // Read files in hour folder
                 if (!fs.existsSync(hourPath)) continue;
 
                 const files = fs.readdirSync(hourPath);
+                const mp4Files = files.filter(file => file.toLowerCase().endsWith('.mp4'));
 
-                // Filter only .mp4_ files (not .mp4)
-                const mp4Files = files.filter(file =>
-                    file.toLowerCase().endsWith('.mp4')
-                );
-
-                // Add each video to the list with metadata
                 for (const videoFile of mp4Files) {
                     const videoPath = path.join(hourPath, videoFile);
                     const stats = fs.statSync(videoPath);
@@ -116,14 +141,14 @@ app.get('/files', (req: Request, res: Response) => {
                         modified: stats.mtime,
                         date: dateFolder,
                         hour: hourFolder,
-                        relativePath: `share/HG0438PAZ00052/${dateFolder}/001/dav/${hourFolder}/${videoFile}`,
-                        downloadUrl: `/files/${encodeURIComponent(videoFile)}`
+                        camera: camera,
+                        relativePath: `share/${cameraResult.cameraId}/${dateFolder}/001/dav/${hourFolder}/${videoFile}`,
+                        downloadUrl: `/files/search-video?name=${encodeURIComponent(videoFile)}&date=${dateFolder}&camera=${camera}`
                     });
                 }
             }
         }
 
-        // Sort by date and hour (most recent first)
         videoList.sort((a, b) => {
             const dateCompare = b.date.localeCompare(a.date);
             if (dateCompare !== 0) return dateCompare;
@@ -131,6 +156,8 @@ app.get('/files', (req: Request, res: Response) => {
         });
 
         res.json({
+            camera: camera,
+            cameraId: cameraResult.cameraId,
             count: videoList.length,
             videos: videoList,
             message: `Found ${videoList.length} videos with .mp4 extension`
@@ -145,104 +172,89 @@ app.get('/files', (req: Request, res: Response) => {
     }
 });
 
-
-
-// Search and download video in one request
+// Search and download video
 app.get('/files/search-video', (req: Request, res: Response) => {
     try {
-        const { name, date } = req.query;
+        const { name, date, camera } = req.query;
 
-        // Validation des paramètres
-        if (!name || !date) {
+        if (!name || !date || !camera) {
             return res.status(400).json({
                 error: 'Missing parameters',
-                message: 'Both "name" and "date" parameters are required',
-                example: '/files/search-video?name=13.00.00&date=2025-12-07'
+                message: 'Parameters "name", "date", and "camera" are required',
+                example: '/files/search-video?name=13.00.00&date=2025-12-07&camera=cam1'
+            });
+        }
+
+        const cameraResult = getCameraPath(camera as string);
+        if (!cameraResult.success) {
+            return res.status(400).json({
+                error: 'Invalid camera parameter',
+                message: cameraResult.error
             });
         }
 
         const fileName = name as string;
         const fileDate = date as string;
 
-        // Valider le format de la date (YYYY-MM-DD)
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fileDate)) {
             return res.status(400).json({
                 error: 'Invalid date format',
-                message: 'Date must be in format YYYY-MM-DD (e.g., 2025-12-07)'
+                message: 'Date must be in format YYYY-MM-DD'
             });
         }
 
-        // Extraire l'heure du nom du fichier (les 2 premiers caractères)
-        // Exemple: "13.00.00" -> hour = "13"
         const hourMatch = fileName.match(/^(\d{2})\./);
         if (!hourMatch) {
             return res.status(400).json({
                 error: 'Invalid filename format',
-                message: 'Filename must start with hour format (e.g., 13.00.00)'
+                message: 'Filename must start with hour format'
             });
         }
 
         const hour = hourMatch[1];
-
-        // Construire le chemin du dossier
         const targetPath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00052',
+            'share',
+            cameraResult.cameraId,
             fileDate,
             '001/dav',
             hour
         );
 
-        console.log(`[API]  Searching for: ${fileName}`);
-        console.log(`[API]  In directory: ${targetPath}`);
+        console.log(`[API] Searching for: ${fileName} in ${camera}`);
+        console.log(`[API] Directory: ${targetPath}`);
 
-        // Vérifier si le dossier existe
         if (!fs.existsSync(targetPath)) {
             return res.status(404).json({
                 error: 'Directory not found',
-                message: `No directory found for date ${fileDate} and hour ${hour}`,
-                searchPath: targetPath
+                message: `No directory found for ${camera} on ${fileDate} at hour ${hour}`
             });
         }
 
-        // Chercher le fichier dans le dossier
         const files = fs.readdirSync(targetPath);
-
-        console.log(`[API]  Files in directory:`, files);
-
-        // Chercher les fichiers qui commencent par le nom recherché
-        // Exemple: chercher "14.00.05" trouvera "14.00.05-14.03.00[R][0@0][0].mp4"
         const matchedFiles = files.filter(file => {
             const lowerFile = file.toLowerCase();
             const lowerSearch = fileName.toLowerCase();
-
-            // Le fichier doit commencer par le nom recherché et se terminer par .mp4
             return lowerFile.startsWith(lowerSearch) && lowerFile.endsWith('.mp4');
         });
-
-        console.log(`[API]  Matched files:`, matchedFiles);
 
         if (matchedFiles.length === 0) {
             return res.status(404).json({
                 error: 'File not found',
-                message: `No file matching "${fileName}" found in ${fileDate}/${hour}`,
-                searchPath: targetPath,
-                availableFiles: files.filter(f => f.toLowerCase().endsWith('.mp4')),
-                hint: 'Try using just the start time like: 14.00.05'
+                message: `No file matching "${fileName}" found`,
+                camera: camera,
+                availableFiles: files.filter(f => f.toLowerCase().endsWith('.mp4'))
             });
         }
 
-        // Prendre le premier fichier correspondant
         const matchedFile = matchedFiles[0];
         const filePath = path.join(targetPath, matchedFile);
 
-        console.log(`[API]  File found: ${matchedFile}`);
-        console.log(`[API]  Downloading video...`);
+        console.log(`[API] Downloading: ${matchedFile}`);
 
-        // Télécharger directement le fichier
         res.download(filePath, matchedFile, (err) => {
             if (err) {
-                console.error(`[API]  Download error:`, err);
+                console.error(`[API] Download error:`, err);
                 if (!res.headersSent) {
                     res.status(500).json({
                         error: 'Download failed',
@@ -250,7 +262,7 @@ app.get('/files/search-video', (req: Request, res: Response) => {
                     });
                 }
             } else {
-                console.log(`[API]  Download completed: ${matchedFile}`);
+                console.log(`[API] Download completed: ${matchedFile}`);
             }
         });
 
@@ -262,76 +274,68 @@ app.get('/files/search-video', (req: Request, res: Response) => {
         });
     }
 });
+
+// Get videos by date
 app.get('/files/videos-by-date', (req: Request, res: Response) => {
     try {
-        const { date } = req.query;
+        const { date, camera } = req.query;
 
-        // Validation du paramètre
-        if (!date) {
+        if (!date || !camera) {
             return res.status(400).json({
-                error: 'Missing parameter',
-                message: 'Date parameter is required',
-                example: '/files/videos-by-date?date=2025-12-07'
+                error: 'Missing parameters',
+                message: 'Both "date" and "camera" parameters are required',
+                example: '/files/videos-by-date?date=2025-12-07&camera=cam1'
+            });
+        }
+
+        const cameraResult = getCameraPath(camera as string);
+        if (!cameraResult.success) {
+            return res.status(400).json({
+                error: 'Invalid camera parameter',
+                message: cameraResult.error
             });
         }
 
         const fileDate = date as string;
 
-        // Valider le format de la date (YYYY-MM-DD)
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fileDate)) {
             return res.status(400).json({
                 error: 'Invalid date format',
-                message: 'Date must be in format YYYY-MM-DD (e.g., 2025-12-07)'
+                message: 'Date must be in format YYYY-MM-DD'
             });
         }
 
-        // Construire le chemin du jour
         const datePath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00052',
+            'share',
+            cameraResult.cameraId,
             fileDate,
             '001/dav'
         );
 
-        console.log(`[API]  Searching videos for date: ${fileDate}`);
-        console.log(`[API]  In directory: ${datePath}`);
+        console.log(`[API] Searching videos for ${camera} on ${fileDate}`);
 
-        // Vérifier si le dossier de la date existe
         if (!fs.existsSync(datePath)) {
             return res.status(404).json({
                 error: 'Date directory not found',
-                message: `No videos found for date ${fileDate}`,
-                searchPath: datePath,
-                date: fileDate
+                message: `No videos found for ${camera} on ${fileDate}`,
+                camera: camera
             });
         }
 
         const videoList: any[] = [];
-
-        // Lire tous les dossiers d'heures (00, 01, 02, ..., 23)
         const hourFolders = fs.readdirSync(datePath).filter(item => {
             const itemPath = path.join(datePath, item);
             return fs.statSync(itemPath).isDirectory() && /^\d{2}$/.test(item);
         });
 
-        // Trier les dossiers d'heures
         hourFolders.sort();
 
-        console.log(`[API]  Found ${hourFolders.length} hour folders`);
-
-        // Parcourir chaque dossier d'heure
         for (const hourFolder of hourFolders) {
             const hourPath = path.join(datePath, hourFolder);
-
-            // Lire les fichiers dans le dossier
             const files = fs.readdirSync(hourPath);
+            const mp4Files = files.filter(file => file.toLowerCase().endsWith('.mp4'));
 
-            // Filtrer uniquement les fichiers .mp4
-            const mp4Files = files.filter(file =>
-                file.toLowerCase().endsWith('.mp4')
-            );
-
-            // Ajouter chaque vidéo à la liste
             for (const videoFile of mp4Files) {
                 const videoPath = path.join(hourPath, videoFile);
                 const stats = fs.statSync(videoPath);
@@ -344,35 +348,32 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
                     modified: stats.mtime,
                     date: fileDate,
                     hour: hourFolder,
-                    relativePath: `share/HG0438PAZ00052/${fileDate}/001/dav/${hourFolder}/${videoFile}`,
-                    downloadUrl: `/files/search-video?name=${encodeURIComponent(videoFile)}&date=${fileDate}`
+                    camera: camera,
+                    relativePath: `share/${cameraResult.cameraId}/${fileDate}/001/dav/${hourFolder}/${videoFile}`,
+                    downloadUrl: `/files/search-video?name=${encodeURIComponent(videoFile)}&date=${fileDate}&camera=${camera}`
                 });
             }
         }
 
-        // Trier par heure (du plus ancien au plus récent)
         videoList.sort((a, b) => {
             const hourCompare = parseInt(a.hour) - parseInt(b.hour);
             if (hourCompare !== 0) return hourCompare;
             return a.name.localeCompare(b.name);
         });
 
-        console.log(`[API]  Found ${videoList.length} videos for ${fileDate}`);
-
-        // Calculer la taille totale
         const totalSize = videoList.reduce((sum, video) => sum + video.size, 0);
-        const totalSizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
-        const totalSizeInGB = (totalSize / (1024 * 1024 * 1024)).toFixed(2);
 
         res.json({
             success: true,
+            camera: camera,
+            cameraId: cameraResult.cameraId,
             date: fileDate,
             count: videoList.length,
             hours: hourFolders.length,
             totalSize: {
                 bytes: totalSize,
-                mb: totalSizeInMB,
-                gb: totalSizeInGB
+                mb: (totalSize / (1024 * 1024)).toFixed(2),
+                gb: (totalSize / (1024 * 1024 * 1024)).toFixed(2)
             },
             videos: videoList
         });
@@ -386,25 +387,30 @@ app.get('/files/videos-by-date', (req: Request, res: Response) => {
     }
 });
 
-
-// 1. Delete a specific video file ONLY
+// Delete a specific video file
 app.delete('/files/delete-video', (req: Request, res: Response) => {
     try {
-        const { name, date } = req.query;
+        const { name, date, camera } = req.query;
 
-        // Validation des paramètres
-        if (!name || !date) {
+        if (!name || !date || !camera) {
             return res.status(400).json({
                 error: 'Missing parameters',
-                message: 'Both "name" and "date" parameters are required',
-                example: '/files/delete-video?name=13.00.00-1234.mp4&date=2025-12-07'
+                message: 'Parameters "name", "date", and "camera" are required',
+                example: '/files/delete-video?name=13.00.00-1234.mp4&date=2025-12-07&camera=cam1'
+            });
+        }
+
+        const cameraResult = getCameraPath(camera as string);
+        if (!cameraResult.success) {
+            return res.status(400).json({
+                error: 'Invalid camera parameter',
+                message: cameraResult.error
             });
         }
 
         const fileName = name as string;
         const fileDate = date as string;
 
-        // Valider le format de la date
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fileDate)) {
             return res.status(400).json({
                 error: 'Invalid date format',
@@ -412,41 +418,36 @@ app.delete('/files/delete-video', (req: Request, res: Response) => {
             });
         }
 
-        // Extraire l'heure du nom du fichier
         const hourMatch = fileName.match(/^(\d{2})\./);
         if (!hourMatch) {
             return res.status(400).json({
                 error: 'Invalid filename format',
-                message: 'Filename must start with hour format (e.g., 13.00.00-1234.mp4)'
+                message: 'Filename must start with hour format'
             });
         }
 
         const hour = hourMatch[1];
-
-        // Construire le chemin complet du fichier
         const filePath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00052',
+            'share',
+            cameraResult.cameraId,
             fileDate,
             '001/dav',
             hour,
             fileName
         );
 
-        console.log(`[API] 🗑️  Deleting video file: ${fileName}`);
+        console.log(`[API]  Deleting video: ${fileName} from ${camera}`);
 
-        // Vérifier si le fichier existe
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({
                 error: 'File not found',
-                message: `File "${fileName}" not found in ${fileDate}/${hour}`
+                message: `File "${fileName}" not found for ${camera}`
             });
         }
 
-        // Supprimer SEULEMENT le fichier vidéo
         fs.unlinkSync(filePath);
-
-        console.log(`[API] ✅ Video file deleted: ${fileName}`);
+        console.log(`[API]  Video deleted: ${fileName}`);
 
         res.json({
             success: true,
@@ -454,36 +455,44 @@ app.delete('/files/delete-video', (req: Request, res: Response) => {
             deleted: {
                 name: fileName,
                 date: fileDate,
-                hour: hour
+                hour: hour,
+                camera: camera
             }
         });
 
     } catch (error) {
-        console.error('[API Error] Failed to delete video file:', error);
+        console.error('[API Error] Failed to delete video:', error);
         res.status(500).json({
-            error: 'Failed to delete video file',
+            error: 'Failed to delete video',
             message: (error as Error).message
         });
     }
 });
-// 2. Delete complete hour directory (folder + all contents)
+
+// Delete hour directory
 app.delete('/files/delete-by-hour', (req: Request, res: Response) => {
     try {
-        const { date, hour } = req.query;
+        const { date, hour, camera } = req.query;
 
-        // Validation des paramètres
-        if (!date || !hour) {
+        if (!date || !hour || !camera) {
             return res.status(400).json({
                 error: 'Missing parameters',
-                message: 'Both "date" and "hour" parameters are required',
-                example: '/files/delete-by-hour?date=2025-12-07&hour=13'
+                message: 'Parameters "date", "hour", and "camera" are required',
+                example: '/files/delete-by-hour?date=2025-12-07&hour=13&camera=cam1'
+            });
+        }
+
+        const cameraResult = getCameraPath(camera as string);
+        if (!cameraResult.success) {
+            return res.status(400).json({
+                error: 'Invalid camera parameter',
+                message: cameraResult.error
             });
         }
 
         const fileDate = date as string;
         const fileHour = hour as string;
 
-        // Valider le format de la date
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fileDate)) {
             return res.status(400).json({
                 error: 'Invalid date format',
@@ -491,58 +500,47 @@ app.delete('/files/delete-by-hour', (req: Request, res: Response) => {
             });
         }
 
-        // Valider le format de l'heure (00-23)
         if (!/^\d{2}$/.test(fileHour) || parseInt(fileHour) > 23) {
             return res.status(400).json({
                 error: 'Invalid hour format',
-                message: 'Hour must be in format 00-23 (e.g., 13, 00, 23)'
+                message: 'Hour must be in format 00-23'
             });
         }
 
-        // Construire le chemin du dossier d'heure
         const hourPath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00052',
+            'share',
+            cameraResult.cameraId,
             fileDate,
             '001/dav',
             fileHour
         );
 
-        console.log(`[API] 🗑️  Deleting complete hour directory: ${fileHour}`);
-        console.log(`[API] 📁 Path: ${hourPath}`);
+        console.log(`[API]  Deleting hour directory: ${fileHour} for ${camera}`);
 
-        // Vérifier si le dossier existe
         if (!fs.existsSync(hourPath)) {
             return res.status(404).json({
                 error: 'Hour directory not found',
-                message: `No directory found for ${fileDate} at hour ${fileHour}`
+                message: `No directory found for ${camera} on ${fileDate} at hour ${fileHour}`
             });
         }
 
-        // Fonction récursive pour supprimer un dossier et tout son contenu
         function deleteFolderRecursive(dirPath: string): void {
             if (fs.existsSync(dirPath)) {
                 fs.readdirSync(dirPath).forEach((file) => {
                     const curPath = path.join(dirPath, file);
-
                     if (fs.lstatSync(curPath).isDirectory()) {
-                        // Récursif pour les sous-dossiers
                         deleteFolderRecursive(curPath);
                     } else {
-                        // Supprimer le fichier
                         fs.unlinkSync(curPath);
                     }
                 });
-
-                // Supprimer le dossier vide
                 fs.rmdirSync(dirPath);
             }
         }
 
-        // Supprimer le dossier complet de l'heure
         deleteFolderRecursive(hourPath);
-
-        console.log(`[API] ✅ Hour directory deleted completely: ${fileHour}`);
+        console.log(`[API]  Hour directory deleted: ${fileHour}`);
 
         res.json({
             success: true,
@@ -550,7 +548,7 @@ app.delete('/files/delete-by-hour', (req: Request, res: Response) => {
             deleted: {
                 date: fileDate,
                 hour: fileHour,
-                path: hourPath
+                camera: camera
             }
         });
 
@@ -563,23 +561,29 @@ app.delete('/files/delete-by-hour', (req: Request, res: Response) => {
     }
 });
 
-// 3. Delete complete date directory (folder + all contents)
+// Delete date directory
 app.delete('/files/delete-by-date', (req: Request, res: Response) => {
     try {
-        const { date } = req.query;
+        const { date, camera } = req.query;
 
-        // Validation du paramètre
-        if (!date) {
+        if (!date || !camera) {
             return res.status(400).json({
-                error: 'Missing parameter',
-                message: 'Date parameter is required',
-                example: '/files/delete-by-date?date=2025-12-07'
+                error: 'Missing parameters',
+                message: 'Parameters "date" and "camera" are required',
+                example: '/files/delete-by-date?date=2025-12-07&camera=cam1'
+            });
+        }
+
+        const cameraResult = getCameraPath(camera as string);
+        if (!cameraResult.success) {
+            return res.status(400).json({
+                error: 'Invalid camera parameter',
+                message: cameraResult.error
             });
         }
 
         const fileDate = date as string;
 
-        // Valider le format de la date
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fileDate)) {
             return res.status(400).json({
                 error: 'Invalid date format',
@@ -587,55 +591,45 @@ app.delete('/files/delete-by-date', (req: Request, res: Response) => {
             });
         }
 
-        // Construire le chemin du dossier complet de la date
         const dateRootPath = path.join(
             API_CONFIG.storage_path,
-            'share/HG0438PAZ00052',
+            'share',
+            cameraResult.cameraId,
             fileDate
         );
 
-        console.log(`[API] 🗑️  Deleting complete date directory: ${fileDate}`);
-        console.log(`[API] 📁 Path: ${dateRootPath}`);
+        console.log(`[API]  Deleting date directory: ${fileDate} for ${camera}`);
 
-        // Vérifier si le dossier existe
         if (!fs.existsSync(dateRootPath)) {
             return res.status(404).json({
                 error: 'Date directory not found',
-                message: `No directory found for date ${fileDate}`
+                message: `No directory found for ${camera} on ${fileDate}`
             });
         }
 
-        // Fonction récursive pour supprimer un dossier et tout son contenu
         function deleteFolderRecursive(dirPath: string): void {
             if (fs.existsSync(dirPath)) {
                 fs.readdirSync(dirPath).forEach((file) => {
                     const curPath = path.join(dirPath, file);
-
                     if (fs.lstatSync(curPath).isDirectory()) {
-                        // Récursif pour les sous-dossiers
                         deleteFolderRecursive(curPath);
                     } else {
-                        // Supprimer le fichier
                         fs.unlinkSync(curPath);
                     }
                 });
-
-                // Supprimer le dossier vide
                 fs.rmdirSync(dirPath);
             }
         }
 
-        // Supprimer le dossier complet de la date
         deleteFolderRecursive(dateRootPath);
-
-        console.log(`[API] ✅ Date directory deleted completely: ${fileDate}`);
+        console.log(`[API]  Date directory deleted: ${fileDate}`);
 
         res.json({
             success: true,
             message: `Complete directory for ${fileDate} deleted successfully`,
             deleted: {
                 date: fileDate,
-                path: dateRootPath
+                camera: camera
             }
         });
 
@@ -647,6 +641,7 @@ app.delete('/files/delete-by-date', (req: Request, res: Response) => {
         });
     }
 });
+
 // 404 handler
 app.use((req: Request, res: Response) => {
     res.status(404).json({
@@ -659,18 +654,21 @@ app.use((req: Request, res: Response) => {
 async function startApiServer() {
     app.listen(API_CONFIG.port, API_CONFIG.host, () => {
         console.log('='.repeat(60));
-        console.log('  EXPRESS API SERVER STARTED');
+        console.log('  EXPRESS API SERVER STARTED - MULTI-CAMERA');
         console.log('='.repeat(60));
         console.log(`URL: http://${API_CONFIG.host}:${API_CONFIG.port}`);
         console.log(`Storage: ${API_CONFIG.storage_path}`);
-        console.log('\nAvailable Endpoints:');
-        console.log('  GET    /health              - Health check');
-        console.log('  GET    /files               - List all files');
-        console.log('  GET    /files/:filename     - Download file');
-        console.log('  GET    /files/:filename/info - Get file info');
-        console.log('  POST   /files               - Upload file');
-        console.log('  DELETE /files/:filename     - Delete file');
-        console.log('  GET    /search?q=<query>    - Search files');
+        console.log('\nConfigured Cameras:');
+        console.log(`  cam1: ${API_CONFIG.cameras.cam1}`);
+        console.log(`  cam2: ${API_CONFIG.cameras.cam2}`);
+        console.log('\nAvailable Endpoints (add ?camera=cam1 or ?camera=cam2):');
+        console.log('  GET    /health');
+        console.log('  GET    /files?camera=cam1');
+        console.log('  GET    /files/search-video?name=X&date=Y&camera=cam1');
+        console.log('  GET    /files/videos-by-date?date=Y&camera=cam1');
+        console.log('  DELETE /files/delete-video?name=X&date=Y&camera=cam1');
+        console.log('  DELETE /files/delete-by-hour?date=Y&hour=H&camera=cam1');
+        console.log('  DELETE /files/delete-by-date?date=Y&camera=cam1');
         console.log('='.repeat(60));
         console.log('\nAPI Server is ready!\n');
     });
