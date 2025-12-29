@@ -33,7 +33,7 @@ const ftpServer = new FtpSrv({
     pasv_min: FTP_CONFIG.pasv_min,
     pasv_max: FTP_CONFIG.pasv_max,
     greeting: FTP_CONFIG.greeting,
-    port: 2121,
+    port: 21,
     anonymous: false  // Allow anonymous login for simplicity
 });
 
