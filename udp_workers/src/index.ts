@@ -53,44 +53,65 @@ const smartConfig = {
         console.log('  Params:', [decoded.param1, decoded.param2, decoded.param3]);
         console.log('  Valid:', decoded.valid);
         console.log('  Hex:', decoded.rawPacket.toString('hex').toUpperCase());
-        //TO DO post request 
-
 
         // Describe the command
         const desc = SmartDecoder.describe(decoded);
         console.log('  Description:', desc);
+
         // POST requests based on command
         try {
             const baseUrl = 'http://localhost:9898';
             // const baseUrl = 'http://192.168.1.237:9898';
 
-            // Command 0x10 - Focus Start
+            // Déterminer la caméra (param1: 0 = cam1, 1 = cam2)
+            const camera = decoded.param1 === 0 ? 'cam1' : decoded.param1 === 1 ? 'cam2' : null;
+
+            if (camera === null) {
+                console.log(`   Invalid camera parameter (param1): ${decoded.param1}`);
+                return;
+            }
+
+            // Command 0x10 - Focus Start/Stop
             if (decoded.command === 0x10) {
-                console.log('  → Sending POST request: focus/start');
-                const response = await fetch(`${baseUrl}/focus/start`, {
+                // param1: 0=cam1, 1=cam2
+                // param2: 0=stop, 1=start
+                const action = decoded.param2 === 0 ? 'stop' : decoded.param2 === 1 ? 'start' : null;
+
+                if (action === null) {
+                    console.log(`   Invalid action parameter (param2): ${decoded.param2}`);
+                    return;
+                }
+
+                const endpoint = `ia_process/focus/${camera}/${action}`;
+                console.log(`  → Sending POST request: ${endpoint}`);
+
+                const response = await fetch(`${baseUrl}/${endpoint}`, {
                     method: 'POST'
                 });
 
                 console.log(`  Status: ${response.status} ${response.statusText}`);
 
                 if (response.ok) {
-                    console.log('   Focus start request sent successfully');
+                    console.log(`   Focus ${action} for ${camera} sent successfully`);
                 } else {
-                    console.log(`   Focus start request failed: ${response.status}`);
+                    console.log(`   Focus ${action} for ${camera} failed: ${response.status}`);
                 }
             }
 
-            // Command 0x20 - Detection Start/Stop
+            // Command 0x20 - Track Object Start/Stop
             else if (decoded.command === 0x20) {
-                const endpoint = decoded.param1 === 0 ? 'detection/stop' :
-                    decoded.param1 === 1 ? 'detection/start' : null;
+                // param1: 0=cam1, 1=cam2
+                // param2: 0=stop, 1=start
+                const action = decoded.param2 === 0 ? 'stop' : decoded.param2 === 1 ? 'start' : null;
 
-                if (endpoint === null) {
-                    console.log(`   Unknown param1 value: ${decoded.param1}`);
+                if (action === null) {
+                    console.log(`   Invalid action parameter (param2): ${decoded.param2}`);
                     return;
                 }
 
+                const endpoint = `ia_process/trackobject/${camera}/${action}`;
                 console.log(`  → Sending POST request: ${endpoint}`);
+
                 const response = await fetch(`${baseUrl}/${endpoint}`, {
                     method: 'POST'
                 });
@@ -98,22 +119,42 @@ const smartConfig = {
                 console.log(`  Status: ${response.status} ${response.statusText}`);
 
                 if (response.ok) {
-                    console.log(`   ${endpoint} request sent successfully`);
+                    console.log(`   Track object ${action} for ${camera} sent successfully`);
                 } else {
-                    console.log(`   ${endpoint} request failed: ${response.status}`);
+                    console.log(`   Track object ${action} for ${camera} failed: ${response.status}`);
                 }
             }
 
+            // Command 0x30 - Track Object with ID
             else if (decoded.command === 0x30) {
-                const endpoint = decoded.param2 === 0 ? 'track/stop' :
-                    decoded.param2 === 1 ? `track/object/${decoded.param1}` : null;
+                // param1: 0=cam1, 1=cam2
+                // param2: 0=stop, 1=start
+                // param3: ID de l'objet (octet hex à convertir en décimal)
+                
+                // Conversion explicite de param3 (hex) en décimal
+                const objectId = parseInt(decoded.param3.toString(), 10);
+                console.log(`     Object ID (hex): 0x${decoded.param3.toString(16).toUpperCase().padStart(2, '0')}`);
+                console.log(`     Object ID (decimal): ${objectId}`);
 
-                if (endpoint === null) {
-                    console.log(`   Unknown param2 value: ${decoded.param2}`);
+                const action = decoded.param2 === 0 ? 'stop' : decoded.param2 === 1 ? 'start' : null;
+
+                if (action === null) {
+                    console.log(`   Invalid action parameter (param2): ${decoded.param2}`);
                     return;
                 }
 
+                let endpoint: string;
+
+                if (action === 'stop') {
+                    // Pour stop, pas besoin d'ID dans l'endpoint
+                    endpoint = `ia_process/trackobject_ids/${camera}/stop`;
+                } else {
+                    // Pour start, toujours inclure l'ID converti en décimal
+                    endpoint = `ia_process/trackobject_ids/${camera}/start/${objectId}`;
+                }
+
                 console.log(`  → Sending POST request: ${endpoint}`);
+
                 const response = await fetch(`${baseUrl}/${endpoint}`, {
                     method: 'POST'
                 });
@@ -121,27 +162,12 @@ const smartConfig = {
                 console.log(`  Status: ${response.status} ${response.statusText}`);
 
                 if (response.ok) {
-                    console.log(`   ${endpoint} request sent successfully`);
+                    console.log(`   Track object with ID ${action} for ${camera} sent successfully`);
                 } else {
-                    console.log(`   ${endpoint} request failed: ${response.status}`);
+                    console.log(`   Track object with ID ${action} for ${camera} failed: ${response.status}`);
                 }
             }
 
-            // else if (decoded.command === 0x30) {
-            //     console.log(`  → Sending POST request with id: ${decoded.param1}`);
-            //     const response = await fetch(`${baseUrl}/track/object/${decoded.param1}`, {
-            //         method: 'POST',
-            //         // body: JSON.stringify({ id: decoded.param1 })
-            //     });
-
-            //     console.log(`  Status: ${response.status} ${response.statusText}`);
-
-            //     if (response.ok) {
-            //         console.log(`   ID ${decoded.param1} sent successfully`);
-            //     } else {
-            //         console.log(`   ID request failed: ${response.status}`);
-            //     }
-            // }
         } catch (error) {
             if (error instanceof Error) {
                 console.error('   POST request error:', error.message);
@@ -196,7 +222,10 @@ async function main() {
         console.log('  Port: 5001');
         console.log('  Response Port: 52383');
         console.log('  Protocol: SMART (AI Camera Control)');
-        console.log('  Commands: Rapid Focus, Multi-Object Scan, Smart Tracking, Auto-Record');
+        console.log('  Commands:');
+        console.log('    0x10 - Focus (cam1/cam2)');
+        console.log('    0x20 - Track Object (cam1/cam2)');
+        console.log('    0x30 - Track Object with ID (cam1/cam2)');
         console.log('  Test: npm run smart:terminal');
         console.log();
         console.log('Press Ctrl+C to stop both servers');
